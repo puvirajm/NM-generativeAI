@@ -1,0 +1,118 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyNN9zoEqemZ488hsGtreDFZ",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/puvirajm/NM-generativeAI/blob/main/Wikibot\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# STEP 1: Install Required Packages with Version Compatibility\n",
+        "!pip install -q langchain langchain-community wikipedia google-generativeai langchain-google-genai\n",
+        "\n",
+        "# STEP 2: Import Libraries\n",
+        "import os\n",
+        "from langchain_google_genai import ChatGoogleGenerativeAI\n",
+        "from langchain_community.utilities import WikipediaAPIWrapper\n",
+        "from langchain.schema import SystemMessage, HumanMessage\n",
+        "\n",
+        "# STEP 3: Set your Google API Key (replace with your actual key)\n",
+        "os.environ[\"GOOGLE_API_KEY\"] = \"AIzaSyCWmXNYJ8TIoZhEpCrojUYmRzdI6J87Ej8\"  # Replace with your actual API key\n",
+        "\n",
+        "# STEP 4: Initialize Gemini (Google Generative AI)\n",
+        "def get_llm():\n",
+        "    return ChatGoogleGenerativeAI(\n",
+        "        model=\"gemini-1.5-pro\",\n",
+        "        google_api_key=os.getenv(\"GOOGLE_API_KEY\")\n",
+        "    )\n",
+        "\n",
+        "llm = get_llm()\n",
+        "\n",
+        "# STEP 5: Set up Wikipedia Wrapper\n",
+        "wiki_wrapper = WikipediaAPIWrapper(top_k_results=2)\n",
+        "\n",
+        "# STEP 6: Chatbot Function\n",
+        "def wiki_chatbot(query):\n",
+        "    # Get Wikipedia content\n",
+        "    wiki_content = wiki_wrapper.run(query)\n",
+        "\n",
+        "    # Prompt messages\n",
+        "    messages = [\n",
+        "        SystemMessage(content=\"You are a helpful assistant who uses Wikipedia content to answer questions.\"),\n",
+        "        HumanMessage(content=f\"Here is some Wikipedia info:\\n\\n{wiki_content}\\n\\nNow answer this question: {query}\")\n",
+        "    ]\n",
+        "\n",
+        "    # Get LLM response\n",
+        "    response = llm.invoke(messages)\n",
+        "    return response.content\n",
+        "\n",
+        "# STEP 7: Chat Loop\n",
+        "print(\"WikipediaBot is ready! Type 'exit' to quit.\\n\")\n",
+        "while True:\n",
+        "    user_input = input(\"You: \")\n",
+        "    if user_input.lower() in [\"exit\", \"quit\"]:\n",
+        "        break\n",
+        "    try:\n",
+        "        answer = wiki_chatbot(user_input)\n",
+        "        print(\"\\nWikipediaBot:\", answer, \"\\n\")\n",
+        "    except Exception as e:\n",
+        "        print(\"Error:\", e)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "UFtUx-uB3jo8",
+        "outputId": "2bccb3f5-51d5-4584-e176-3a37b8e62857"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "  Preparing metadata (setup.py) ... \u001b[?25l\u001b[?25hdone\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m2.5/2.5 MB\u001b[0m \u001b[31m24.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m42.0/42.0 kB\u001b[0m \u001b[31m2.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m44.4/44.4 kB\u001b[0m \u001b[31m2.7 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m50.9/50.9 kB\u001b[0m \u001b[31m3.9 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25h  Building wheel for wikipedia (setup.py) ... \u001b[?25l\u001b[?25hdone\n",
+            "WikipediaBot is ready! Type 'exit' to quit.\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "mm08qzMW36wB"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
