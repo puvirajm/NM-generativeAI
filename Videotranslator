@@ -1,0 +1,158 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyNCAVqc73wQesgsVcJz7Y7r",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/puvirajm/NM-generativeAI/blob/main/Videotranslator\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Install required libraries\n",
+        "!pip install gradio transformers torch gtts moviepy openai-whisper --quiet\n",
+        "\n",
+        "# Import necessary libraries\n",
+        "import gradio as gr\n",
+        "import moviepy.editor as mp\n",
+        "import os\n",
+        "from gtts import gTTS\n",
+        "import whisper\n",
+        "from transformers import pipeline\n",
+        "\n",
+        "# Load Whisper model (this may take a moment)\n",
+        "whisper_model = whisper.load_model(\"base\")\n",
+        "\n",
+        "# Define translation models for South Indian languages and their gTTS language codes\n",
+        "translation_models = {\n",
+        "    \"English to Tamil\": {\"model\": \"Helsinki-NLP/opus-mt-en-ta\", \"tts_lang\": \"ta\"},\n",
+        "    \"English to Telugu\": {\"model\": \"Helsinki-NLP/opus-mt-en-te\", \"tts_lang\": \"te\"},\n",
+        "    \"English to Kannada\": {\"model\": \"Helsinki-NLP/opus-mt-en-kn\", \"tts_lang\": \"kn\"},\n",
+        "    \"English to Malayalam\": {\"model\": \"Helsinki-NLP/opus-mt-en-ml\", \"tts_lang\": \"ml\"}\n",
+        "}\n",
+        "\n",
+        "def process_video(video_file, target_language):\n",
+        "    # Save the uploaded video file\n",
+        "    input_video_path = \"input_video.mp4\"\n",
+        "    with open(input_video_path, \"wb\") as f:\n",
+        "        f.write(video_file.read())\n",
+        "\n",
+        "    # Load the video using MoviePy and extract its audio\n",
+        "    video_clip = mp.VideoFileClip(input_video_path)\n",
+        "    audio_path = \"extracted_audio.wav\"\n",
+        "    video_clip.audio.write_audiofile(audio_path, logger=None)\n",
+        "\n",
+        "    # Transcribe the audio using Whisper\n",
+        "    transcription_result = whisper_model.transcribe(audio_path)\n",
+        "    original_text = transcription_result[\"text\"]\n",
+        "\n",
+        "    # Set up the translation pipeline using the selected model\n",
+        "    model_name = translation_models[target_language][\"model\"]\n",
+        "    translator = pipeline(\"translation\", model=model_name)\n",
+        "    translation = translator(original_text)[0][\"translation_text\"]\n",
+        "\n",
+        "    # Generate new speech (TTS) for the translated text using gTTS\n",
+        "    tts_language = translation_models[target_language][\"tts_lang\"]\n",
+        "    tts = gTTS(text=translation, lang=tts_language)\n",
+        "    tts_audio_path = \"translated_audio.mp3\"\n",
+        "    tts.save(tts_audio_path)\n",
+        "\n",
+        "    # Load the generated TTS audio and set it as the audio for the original video\n",
+        "    new_audio = mp.AudioFileClip(tts_audio_path)\n",
+        "    # Note: The new audio length may differ from the original. Here we set the new audio and cut or loop as needed.\n",
+        "    # For simplicity, we use the new audio as-is.\n",
+        "    final_video = video_clip.set_audio(new_audio)\n",
+        "    output_video_path = \"translated_video.mp4\"\n",
+        "    final_video.write_videofile(output_video_path, codec=\"libx264\", audio_codec=\"aac\", logger=None)\n",
+        "\n",
+        "    # Clean up temporary files if needed\n",
+        "    # os.remove(input_video_path)\n",
+        "    # os.remove(audio_path)\n",
+        "    # os.remove(tts_audio_path)\n",
+        "\n",
+        "    return output_video_path\n",
+        "\n",
+        "# Create a Gradio interface\n",
+        "iface = gr.Interface(\n",
+        "    fn=process_video,\n",
+        "    inputs=[\n",
+        "        gr.Video(label=\"Input Video (English)\"),\n",
+        "        gr.Dropdown(choices=list(translation_models.keys()), label=\"Select Target Language\")\n",
+        "    ],\n",
+        "    outputs=gr.Video(label=\"Translated Video\"),\n",
+        "    title=\"Video Translator with TTS\",\n",
+        "    description=(\"Upload a video with English speech. The system will transcribe, translate to a South Indian language, \"\n",
+        "                 \"generate new speech for the translation, and output a video with the new audio track.\")\n",
+        ")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "TXU9PP1szNFA",
+        "outputId": "b1762788-16dc-4784-fa43-16013871b742"
+      },
+      "execution_count": 2,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\u001b[?25l     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m0.0/800.5 kB\u001b[0m \u001b[31m?\u001b[0m eta \u001b[36m-:--:--\u001b[0m\r\u001b[2K     \u001b[91m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[91m╸\u001b[0m \u001b[32m798.7/800.5 kB\u001b[0m \u001b[31m25.0 MB/s\u001b[0m eta \u001b[36m0:00:01\u001b[0m\r\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m800.5/800.5 kB\u001b[0m \u001b[31m16.0 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25h  Installing build dependencies ... \u001b[?25l\u001b[?25hdone\n",
+            "  Getting requirements to build wheel ... \u001b[?25l\u001b[?25hdone\n",
+            "  Preparing metadata (pyproject.toml) ... \u001b[?25l\u001b[?25hdone\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m54.0/54.0 MB\u001b[0m \u001b[31m15.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m322.7/322.7 kB\u001b[0m \u001b[31m18.9 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m363.4/363.4 MB\u001b[0m \u001b[31m4.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m13.8/13.8 MB\u001b[0m \u001b[31m63.7 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m24.6/24.6 MB\u001b[0m \u001b[31m35.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m883.7/883.7 kB\u001b[0m \u001b[31m32.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m664.8/664.8 MB\u001b[0m \u001b[31m1.9 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m211.5/211.5 MB\u001b[0m \u001b[31m6.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m56.3/56.3 MB\u001b[0m \u001b[31m11.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m127.9/127.9 MB\u001b[0m \u001b[31m7.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m207.5/207.5 MB\u001b[0m \u001b[31m6.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m21.1/21.1 MB\u001b[0m \u001b[31m74.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m95.2/95.2 kB\u001b[0m \u001b[31m6.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m11.5/11.5 MB\u001b[0m \u001b[31m98.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m72.0/72.0 kB\u001b[0m \u001b[31m5.0 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m62.5/62.5 kB\u001b[0m \u001b[31m4.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m1.2/1.2 MB\u001b[0m \u001b[31m45.0 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25h  Building wheel for openai-whisper (pyproject.toml) ... \u001b[?25l\u001b[?25hdone\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "WARNING:py.warnings:/usr/local/lib/python3.11/dist-packages/moviepy/video/io/sliders.py:61: SyntaxWarning: \"is\" with a literal. Did you mean \"==\"?\n",
+            "  if event.key is 'enter':\n",
+            "\n",
+            "100%|████████████████████████████████████████| 139M/139M [00:00<00:00, 149MiB/s]\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
