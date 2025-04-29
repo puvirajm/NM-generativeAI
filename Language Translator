@@ -1,0 +1,124 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyMu1FK0853GG4/cJ1PAiOUG",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/puvirajm/NM-generativeAI/blob/main/Language%20Translator\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Install required libraries\n",
+        "!pip install gradio transformers torch gtts --quiet\n",
+        "\n",
+        "# Import necessary libraries\n",
+        "import gradio as gr\n",
+        "from transformers import pipeline\n",
+        "from gtts import gTTS\n",
+        "import os\n",
+        "\n",
+        "# Define translation models for South Indian languages\n",
+        "translation_models = {\n",
+        "    \"English to Tamil\": \"Helsinki-NLP/opus-mt-en-ta\",\n",
+        "    \"English to Telugu\": \"Helsinki-NLP/opus-mt-en-te\",\n",
+        "    \"English to Kannada\": \"Helsinki-NLP/opus-mt-en-kn\",\n",
+        "    \"English to Malayalam\": \"Helsinki-NLP/opus-mt-en-ml\"\n",
+        "}\n",
+        "\n",
+        "# Function to translate text\n",
+        "def translate_text(text, language):\n",
+        "    model_name = translation_models[language]\n",
+        "    translator = pipeline(\"translation\", model=model_name)\n",
+        "    translated_text = translator(text)[0][\"translation_text\"]\n",
+        "\n",
+        "    # Generate speech\n",
+        "    tts = gTTS(translated_text, lang=\"ta\" if \"Tamil\" in language else\n",
+        "                                   \"te\" if \"Telugu\" in language else\n",
+        "                                   \"kn\" if \"Kannada\" in language else\n",
+        "                                   \"ml\")  # Malayalam\n",
+        "\n",
+        "    audio_path = \"translated_speech.mp3\"\n",
+        "    tts.save(audio_path)\n",
+        "\n",
+        "    return translated_text, audio_path\n",
+        "\n",
+        "# Create a Gradio interface with dropdown for language selection\n",
+        "iface = gr.Interface(\n",
+        "    fn=translate_text,\n",
+        "    inputs=[\n",
+        "        gr.Textbox(lines=3, placeholder=\"Enter text in English...\"),\n",
+        "        gr.Dropdown(choices=list(translation_models.keys()), label=\"Select Target Language\")\n",
+        "    ],\n",
+        "    outputs=[gr.Textbox(label=\"Translated Text\"), gr.Audio(label=\"Text-to-Speech Output\")],\n",
+        "    title=\"South Indian Language Translator + TTS\",\n",
+        "    description=\"Enter text in English, select a South Indian language, and get the translated text with speech output.\"\n",
+        ")\n",
+        "\n",
+        "# Launch the Gradio app\n",
+        "iface.launch(share=True)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 616
+        },
+        "id": "_Fk1TSZ04-Ve",
+        "outputId": "00c01ac6-57d9-4c29-8837-f68196a14d09"
+      },
+      "execution_count": 5,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Colab notebook detected. To show errors in colab notebook, set debug=True in launch()\n",
+            "* Running on public URL: https://4b8cac1330850b9270.gradio.live\n",
+            "\n",
+            "This share link expires in 1 week. For free permanent hosting and GPU upgrades, run `gradio deploy` from the terminal in the working directory to deploy to Hugging Face Spaces (https://huggingface.co/spaces)\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "<IPython.core.display.HTML object>"
+            ],
+            "text/html": [
+              "<div><iframe src=\"https://4b8cac1330850b9270.gradio.live\" width=\"100%\" height=\"500\" allow=\"autoplay; camera; microphone; clipboard-read; clipboard-write;\" frameborder=\"0\" allowfullscreen></iframe></div>"
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": []
+          },
+          "metadata": {},
+          "execution_count": 5
+        }
+      ]
+    }
+  ]
+}
